@@ -1,45 +1,48 @@
 import jwt from 'jsonwebtoken';
 import asyncHandler from 'express-async-handler';
+import User from '../models/userModel.js';
 
 const protect = asyncHandler(async (req, res, next) => {
   let token;
 
-  if (req.cookies.token) {
-    try {
-      token = req.cookies.token;
+  if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
 
+    try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      req.user = decoded;
+      req.user = await User.findById(decoded.id).select('-password');
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
 
       next();
     } catch (error) {
-      console.error(`\x1b[31m${new Date().toISOString()} AUTH ERROR: Token not valid\x1b[0m`);
+      console.error(`AUTH ERROR: Token not valid`);
       return res.status(401).json({
         success: false,
-        message: 'Not authorized, token failed'
+        message: 'Not authorized, token failed',
       });
     }
-  }
-
-  if (!token) {
-    console.error(`\x1b[31m${new Date().toISOString()} AUTH ERROR: No token provided\x1b[0m`);
+  } else {
     return res.status(401).json({
       success: false,
-      message: 'Not authorized, no token'
+      message: 'Not authorized, no token',
     });
   }
 });
 
-// Admin middleware - checks if user is admin
 const admin = (req, res, next) => {
-  if (req.user && req.user.isAdmin) {
+  if (req.user && req.user.role === 'admin') {
     next();
   } else {
-    console.error(`\x1b[31m${new Date().toISOString()} AUTH ERROR: Admin access denied\x1b[0m`);
-    return res.status(401).json({
+    return res.status(403).json({
       success: false,
-      message: 'Not authorized as admin'
+      message: 'Not authorized as admin',
     });
   }
 };

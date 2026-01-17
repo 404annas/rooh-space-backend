@@ -23,9 +23,23 @@ export const registerUser = async (req, res) => {
             password: hashedPassword
         })
 
+        const token = generateToken(user._id);
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+            sameSite: 'strict'
+        });
+
         res.status(200).json({
             message: "User Registered Successfully",
-            token: generateToken(user._id)
+            token: token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email
+            }
         })
 
     } catch (error) {
@@ -46,9 +60,23 @@ export const loginUser = async (req, res) => {
         if (!isMatch)
             return res.status(401).json({ message: "Invalid credentials" });
 
+        const token = generateToken(user._id);
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+            sameSite: 'strict'
+        });
+
         res.json({
             message: "Login Successful",
-            token: generateToken(user._id),
+            token: token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email
+            }
         });
 
     } catch (error) {
@@ -57,5 +85,27 @@ export const loginUser = async (req, res) => {
 }
 
 export const logoutUser = async (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+    });
+
     res.json({ message: "Logout successful" });
 };
+
+export const getUserProfile = async (req, res) => {
+    try {
+        res.status(200).json({
+            message: "User Getted",
+            user: {
+                id: req.user._id,
+                name: req.user.name,
+                email: req.user.email,
+                role: req.user.role,
+            }
+        })
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
