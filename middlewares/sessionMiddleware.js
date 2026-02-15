@@ -2,7 +2,8 @@ import jwt from 'jsonwebtoken';
 import asyncHandler from 'express-async-handler';
 import User from '../models/userModel.js';
 
-const protect = asyncHandler(async (req, res, next) => {
+// Middleware to check if session has expired (after 3 days)
+const sessionCheck = asyncHandler(async (req, res, next) => {
   let token;
 
   if (req.cookies && req.cookies.token) {
@@ -42,7 +43,7 @@ const protect = asyncHandler(async (req, res, next) => {
 
       next();
     } catch (error) {
-      console.error(`AUTH ERROR: Token not valid or expired`);
+      console.error(`SESSION CHECK ERROR: Token not valid or expired`);
       
       // Clear the invalid/expired token cookie
       res.clearCookie('token', {
@@ -65,15 +66,4 @@ const protect = asyncHandler(async (req, res, next) => {
   }
 });
 
-const admin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    next();
-  } else {
-    return res.status(403).json({
-      success: false,
-      message: 'Not authorized as admin',
-    });
-  }
-};
-
-export { protect, admin };
+export { sessionCheck };
